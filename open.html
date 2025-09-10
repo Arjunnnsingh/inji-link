@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Open Inji</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <script>
+      // CONFIG — your Android package + scheme/host
+      const PKG = "io.mosip.residentapp";
+      const SCHEME = "io.mosip.residentapp.inji";
+      const HOST = "wla-auth";
+
+      // Read params: ?path=welcome or ?path=passcode&setup=1&message=Hi
+      const qp = new URLSearchParams(location.search);
+      const path = (qp.get("path") || "welcome").replace(/^\/+/, ""); // default to welcome
+
+      // Build query string (exclude 'path' key)
+      const deepParams = new URLSearchParams();
+      for (const [k, v] of qp.entries()) if (k !== "path" && v != null) deepParams.append(k, v);
+      const qs = deepParams.toString();
+      const deeplinkPath = `/${path}${qs ? "?" + qs : ""}`;
+
+      // Two strategies depending on context:
+      // 1) intent:// works well from browsers and many apps on Android
+      const intentUrl =
+        `intent://${HOST}${deeplinkPath}` +
+        `#Intent;scheme=${SCHEME};package=${PKG};end`;
+
+      // 2) direct custom scheme (some apps allow it, many don't)
+      const customUrl = `${SCHEME}://${HOST}${deeplinkPath}`;
+
+      // Fallback (if app not installed or blocked)
+      const play = `https://play.google.com/store/apps/details?id=${PKG}`;
+
+      function go() {
+        // Prefer INTENT from browsers like Chrome/Edge
+        try {
+          // Use replace so back button doesn’t come back here
+          location.replace(intentUrl);
+          // If blocked, try custom scheme shortly after
+          setTimeout(() => { location.href = customUrl; }, 400);
+          // Final fallback to Play after ~1.2s
+          setTimeout(() => { location.href = play; }, 1200);
+        } catch (e) {
+          // Last resort
+          location.href = customUrl;
+          setTimeout(() => { location.href = play; }, 1200);
+        }
+      }
+      window.addEventListener("load", go);
+    </script>
+    <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:24px;text-align:center}</style>
+  </head>
+  <body>
+    <h3>Opening Inji…</h3>
+    <p>If nothing happens, <a id="manual" href="#">tap here</a>.</p>
+    <script>document.getElementById('manual').href = 'intent://' + HOST + '#Intent;scheme=' + SCHEME + ';package=' + PKG + ';end';</script>
+  </body>
+</html>
